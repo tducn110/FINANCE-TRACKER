@@ -1,0 +1,9 @@
+# Chặn node_modules ở bất cứ đâu (cả client và server)
+node_modules/
+
+# Chặn file bí mật trong folder server
+server/.env
+
+# Chặn các file rác hệ điều hành
+.DS_Store
+Thumbs.db
