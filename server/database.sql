@@ -1,56 +1,114 @@
+-- ==========================================
+-- 💰 S2S BEHAVIORAL FINANCE: DATABASE SCHEMA
+-- ==========================================
+-- Relational Integrity (Foreign Keys) + ACID (InnoDB)
+-- Safe to re-run: DROP → CREATE → SEED.
+
 CREATE DATABASE IF NOT EXISTS finance_tracker;
 USE finance_tracker;
 
--- Bảng 0: Người dùng (Quản lý Auth)
-CREATE TABLE IF NOT EXISTS users (
+-- ============ CLEANUP LEGACY DATA ============
+-- Drop tables in reverse dependency order to avoid FK constraint errors.
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS fixed_costs;
+DROP TABLE IF EXISTS goals;
+DROP TABLE IF EXISTS user_settings;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS users;
+
+-- ============ TABLE DEFINITIONS ============
+
+-- 1. Users: Identity & Authentication
+CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    full_name VARCHAR(100),
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Soft delete: NULL = active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
--- Bảng 1: Lịch sử Giao dịch (Đã có, update thêm cho OCR)
-CREATE TABLE IF NOT EXISTS transactions (
+-- 2. Categories: Spending classification (Mental Accounting)
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    type ENUM('INCOME', 'EXPENSE') NOT NULL,
+    icon VARCHAR(20),
+    description TEXT
+) ENGINE=InnoDB;
+
+-- 3. User Settings: S2S Engine personalization
+CREATE TABLE user_settings (
+    user_id INT PRIMARY KEY,
+    emergency_buffer DECIMAL(15, 2) DEFAULT 0.00 COMMENT 'Emergency fund threshold',
+    income_date INT DEFAULT 1 COMMENT 'Monthly payday (1-31)',
+    monthly_budget DECIMAL(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- 4. Transactions: Financial journal
+CREATE TABLE transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
+    category_id INT NOT NULL,
     note VARCHAR(255),
-    category_id INT,
     is_ocr_verified BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    transaction_date DATE DEFAULT (CURRENT_DATE),
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Soft delete',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
 
--- Bảng 2: Chi phí Cố định (Tiền trọ, điện nước...)
-CREATE TABLE IF NOT EXISTS fixed_costs (
+-- 5. Fixed Costs: Recurring obligations (rent, utilities)
+CREATE TABLE fixed_costs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL, 
+    name VARCHAR(100) NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
-    due_date INT, -- Ngày phải đóng tiền hàng tháng
-    is_paid BOOLEAN DEFAULT FALSE
-);
+    due_date INT NOT NULL COMMENT 'Monthly due day (1-31)',
+    status ENUM('PENDING', 'PAID', 'OVERDUE') DEFAULT 'PENDING',
+    last_paid_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
--- Bảng 3: Mục tiêu Dài hạn (Laptop, Cổ phiếu...)
-CREATE TABLE IF NOT EXISTS goals (
+-- 6. Goals: Long-term savings targets (Future Self-Continuity)
+CREATE TABLE goals (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
     target_amount DECIMAL(15, 2) NOT NULL,
-    current_saved DECIMAL(15, 2) DEFAULT 0,
-    monthly_contribution DECIMAL(15, 2) NOT NULL, 
+    current_saved DECIMAL(15, 2) DEFAULT 0.00,
+    monthly_contribution DECIMAL(15, 2) NOT NULL COMMENT 'Monthly saving commitment',
     deadline DATE,
-    status ENUM('active', 'completed', 'paused') DEFAULT 'active'
-);
+    status ENUM('active', 'completed', 'paused') DEFAULT 'active',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Soft delete',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
--- Bảng 4: Cài đặt User (Ngưỡng sinh tồn)
-CREATE TABLE IF NOT EXISTS user_settings (
-    user_id INT PRIMARY KEY,
-    emergency_buffer DECIMAL(15, 2) DEFAULT 200000, 
-    income_date INT 
-);
+-- ============ PERFORMANCE INDEXES ============
+-- Composite indexes: O(n) full-scan → O(log n) B-Tree lookup.
+-- Range queries on created_at will now use idx_transactions_user_date correctly.
 
--- Chèn dữ liệu mẫu (Seeder) để test API luôn cho lẹ
-INSERT IGNORE INTO user_settings (user_id, emergency_buffer, income_date) VALUES (1, 500000, 5);
-INSERT IGNORE INTO fixed_costs (user_id, name, amount, due_date) VALUES (1, 'Tiền trọ', 2000000, 10);
-INSERT IGNORE INTO goals (user_id, name, target_amount, monthly_contribution, deadline) 
-VALUES (1, 'Mua Laptop', 45000000, 2000000, '2026-12-31');
+CREATE INDEX idx_transactions_user_cat ON transactions(user_id, category_id);
+CREATE INDEX idx_transactions_user_date ON transactions(user_id, created_at);
+CREATE INDEX idx_fixed_costs_user ON fixed_costs(user_id, status);
+CREATE INDEX idx_goals_user_status ON goals(user_id, status);
+
+-- ============ SEED DATA ============
+-- Categories are system-level, seeded once.
+
+INSERT INTO categories (id, name, type, icon) VALUES
+(1, 'Income',        'INCOME',  '💰'),
+(2, 'Food',          'EXPENSE', '🍔'),
+(3, 'Drink',         'EXPENSE', '🥤'),
+(4, 'Transport',     'EXPENSE', '🚗'),
+(5, 'Rent',          'EXPENSE', '🏠'),
+(6, 'Savings',       'EXPENSE', '🏦'),
+(7, 'Other',         'EXPENSE', '📦');
