@@ -6,10 +6,15 @@ const authSchema = Joi.object({
         'string.min': 'Tên đăng nhập phải có ít nhất 3 ký tự!',
         'string.alphanum': 'Tên đăng nhập chỉ được chứa chữ và số!'
     }),
-    password: Joi.string().min(6).required().messages({
-        'string.empty': 'Vui lòng nhập mật khẩu!',
-        'string.min': 'Mật khẩu phải có ít nhất 6 ký tự!'
-    })
+    password: Joi.string().min(8).max(128)
+        .pattern(/^(?=.*[a-zA-Z])(?=.*\d)/)
+        .required()
+        .messages({
+            'string.empty': 'Vui lòng nhập mật khẩu!',
+            'string.min': 'Mật khẩu phải có ít nhất 8 ký tự!',
+            'string.max': 'Mật khẩu tối đa 128 ký tự!',
+            'string.pattern.base': 'Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số!'
+        })
 });
 
 const quickAddSchema = Joi.object({

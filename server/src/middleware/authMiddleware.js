@@ -1,6 +1,7 @@
 // src/middleware/authMiddleware.js
 
 const jwt = require('jsonwebtoken');
+const { SECURITY } = require('../constant');
 
 // Middleware xác thực JWT thực sự
 const authMiddleware = (req, res, next) => {
@@ -15,14 +16,20 @@ const authMiddleware = (req, res, next) => {
 
     try {
         // 3. Giải mã JWT (DSA: Thuật toán xác thực đối xứng HMAC SHA256)
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // Security: Verify issuer to prevent cross-system token replay
+        const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+            issuer: SECURITY.JWT_ISSUER
+        });
         
         // 4. Gắn data vào Request để Controller phía sau sử dụng
-        req.user = decoded; // Thường chứa { id, username }
+        req.user = decoded; // Chứa { id, username }
         
         next();
     } catch (error) {
-        return res.status(401).json({ success: false, message: "Token không hợp lệ hoặc đã hết hạn!" });
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ success: false, message: "Phiên đăng nhập đã hết hạn! Vui lòng đăng nhập lại." });
+        }
+        return res.status(401).json({ success: false, message: "Token không hợp lệ hoặc đã bị giả mạo!" });
     }
 };
 

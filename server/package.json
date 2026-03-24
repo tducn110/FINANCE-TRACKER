@@ -1,13 +1,15 @@
 {
-  "name": "final-project",
+  "name": "s2s-finance-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "S2S Behavioral Finance System - Backend API",
+  "main": "src/app.js",
   "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["fintech", "behavioral-finance", "s2s"],
+  "author": "Tam Duc",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
