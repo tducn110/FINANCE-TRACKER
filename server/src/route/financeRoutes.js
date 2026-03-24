@@ -2,23 +2,38 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); // Thư mục lưu hóa đơn tạm thời
+const { UPLOAD } = require('../constant');
 
-const { quickAddTransaction, getSafeToSpend, checkGoalImpact, getDailyStatus, processOCR } = require('../controller/financeController');
+// Security: Multer with file type filter + size limit
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: UPLOAD.MAX_FILE_SIZE },
+    fileFilter: (req, file, cb) => {
+        if (UPLOAD.ALLOWED_MIMETYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Chỉ chấp nhận file ảnh (JPG, PNG, WebP)!'), false);
+        }
+    }
+});
+
+const { quickAddTransaction, getSafeToSpend, checkGoalImpact, getDailyStatus, processOCR, getCategories } = require('../controller/financeController');
 const authMiddleware = require('../middleware/authMiddleware');
 const validate = require('../middleware/validateMiddleware');
 const { quickAddSchema, checkImpactSchema } = require('../util/validationSchemas');
 
-// Áp dụng authMiddleware cho tất cả request chạy qua router này
+// Public route: Category templates (no auth needed for FE picker)
+router.get('/categories', getCategories);
+
+// Protected routes: Require JWT authentication
 router.use(authMiddleware);
 
-// Các Endpoints
 router.post('/transactions/quick', validate(quickAddSchema), quickAddTransaction);
 router.get('/finance/safe-to-spend', getSafeToSpend);
 router.post('/finance/check-impact', validate(checkImpactSchema), checkGoalImpact);
 router.get('/mascot/status', getDailyStatus);
 
-// API Mới: Upload Hóa Đơn (OCR)
+// OCR upload with security filter
 router.post('/finance/ocr', upload.single('billImage'), processOCR);
 
 module.exports = router;
