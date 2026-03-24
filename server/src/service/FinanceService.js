@@ -1,61 +1,108 @@
-// src/service/FinanceEngine.js
 const Transaction = require('../model/Transaction');
 const FixedCost = require('../model/FixedCost');
 const Goal = require('../model/Goal');
 const UserSettings = require('../model/UserSettings');
 const { CACHE_TTL } = require('../constant');
 
-// OOP: Lớp xử lý nghiệp vụ lõi (Business Logic Layer)
-// DSA: Ứng dụng Hash Map để làm In-memory Cache, giảm tải Database Query (Time Complexity: O(1))
-class FinanceService {
+/**
+ * OOP: Business Logic Layer (Fat Service, Skinny Controller).
+ * DSA: CacheAdapter wrapping ES6 Map for O(1) S2S lookups.
+ * Scalability: CacheAdapter interface allows future Redis swap with zero Controller changes.
+ * 
+ * The S2S Engine is the "brain" of this application.
+ * Formula: S2S = MonthlyIncome - MonthlyExpense - UnpaidBills - GoalCommitments - EmergencyBuffer
+ */
+
+/**
+ * CacheAdapter: Strategy Pattern wrapper around Map().
+ * All methods are async to allow future Redis/Memcached swap.
+ */
+class CacheAdapter {
     constructor() {
-        // Khởi tạo bộ nhớ tạm để làm Cache (DSA: Hash Map)
-        this.s2sCache = new Map();
+        this.store = new Map();
     }
 
+    async get(key) {
+        const cached = this.store.get(key);
+        if (!cached) return null;
+        if (Date.now() - cached.timestamp > cached.ttl) {
+            this.store.delete(key);
+            return null;
+        }
+        return cached.value;
+    }
+
+    async set(key, value, ttl) {
+        this.store.set(key, { value, timestamp: Date.now(), ttl });
+    }
+
+    async delete(key) {
+        this.store.delete(key);
+    }
+}
+
+class FinanceService {
+    constructor() {
+        this.cache = new CacheAdapter();
+    }
+
+    /**
+     * Calculate Safe-to-Spend for a given user.
+     * All values are scoped to the CURRENT MONTH.
+     * 
+     * Deadlock analysis: This method is READ-ONLY (no transactions).
+     * Potential issue: "Read Skew" if data changes between queries.
+     * Mitigation: Acceptable for dashboard display; ACID only needed for writes.
+     */
     async calculateS2S(userId) {
-        // DSA: Kiểm tra Cache trước, nếu còn hạn thì ném ra lấy luôn (O(1))
-        if (this.s2sCache.has(userId)) {
-            const cachedData = this.s2sCache.get(userId);
-            if (Date.now() - cachedData.timestamp < CACHE_TTL.S2S_ENGINE) {
-                console.log("⚡ [Cache Hit] Trả về S2S từ Hash Map!");
-                return cachedData.value;
-            }
+        // CacheAdapter: O(1) async check before hitting the database
+        const cachedResult = await this.cache.get(userId);
+        if (cachedResult) {
+            console.log("⚡ [Cache Hit] Returning S2S from CacheAdapter");
+            return cachedResult;
         }
 
-        // OOP: Tính toán dựa trên methods của các Models (Encapsulation)
-        // Tính toán số dư thực tế
+        // Auto-detect overdue bills before calculating
+        await FixedCost.markOverdue(userId);
+
+        // Query all components from Models (each scoped to current month)
         const totalIncome = await Transaction.getTotalIncome(userId);
         const totalExpense = await Transaction.getTotalExpense(userId);
-        const actualBalance = totalIncome - totalExpense;
+        const actualBalance = Number(totalIncome) - Number(totalExpense);
 
-        const unpaidBills = await FixedCost.getUnpaidBills(userId);
-        const goalCommitments = await Goal.getMonthlyCommitments(userId);
-        
+        const unpaidBills = Number(await FixedCost.getUnpaidBills(userId));
+        const goalCommitments = Number(await Goal.getMonthlyCommitments(userId));
+
         const settings = await UserSettings.findByUserId(userId);
-        const buffer = settings ? settings.emergency_buffer : 0;
+        const buffer = settings ? Number(settings.emergency_buffer) : 0;
 
         const safeToSpend = actualBalance - unpaidBills - goalCommitments - buffer;
 
         const result = {
-            actualBalance: Number(actualBalance),
-            unpaidBills: Number(unpaidBills),
-            goalCommitments: Number(goalCommitments),
-            emergencyBuffer: Number(buffer),
-            safeToSpend: Number(safeToSpend)
+            totalIncome: Number(totalIncome),
+            totalExpense: Number(totalExpense),
+            actualBalance,
+            unpaidBills,
+            goalCommitments,
+            emergencyBuffer: buffer,
+            safeToSpend,
+            isOverBudget: safeToSpend < 0
         };
 
-        // Cache lại kết quả
-        this.s2sCache.set(userId, { value: result, timestamp: Date.now() });
+        // Cache result for future O(1) reads
+        await this.cache.set(userId, result, CACHE_TTL.S2S_ENGINE);
 
         return result;
     }
 
-    // Xóa cache khi user thực hiện giao dịch (để ép tính lại vào lần gọi sau)
-    invalidateCache(userId) {
-        this.s2sCache.delete(userId);
+    /**
+     * Invalidate cache when user performs a financial action.
+     * Forces recalculation on next S2S request.
+     */
+    async invalidateCache(userId) {
+        await this.cache.delete(userId);
     }
 }
 
-// Export Singleton
+// Export as Singleton (one shared instance across all requests)
 module.exports = new FinanceService();
