@@ -2,65 +2,128 @@ const BaseModel = require('./BaseModel');
 
 class Transaction extends BaseModel {
     constructor() {
-        super('transactions'); // Chỉ định bảng 'transactions' trong MySQL
+        // Enable soft delete for financial data retention
+        super('transactions', { softDelete: true });
     }
 
-    // Logic Quick Add sử dụng kết quả từ Regex Helper
-    async quickCreate(amount, note, categoryId, userId) {
-        const sql = `INSERT INTO ${this.tableName} (amount, note, category_id, user_id) VALUES (?, ?, ?, ?)`;
-        const [result] = await this.db.execute(sql, [amount, note, categoryId, userId]);
-        return result.insertId;
+    /**
+     * Helper: Get the first and last moment of the current month.
+     * Used for Range queries that preserve B-Tree Index (avoids MONTH() anti-pattern).
+     */
+    _getCurrentMonthRange() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        return {
+            start: start.toISOString().slice(0, 10),
+            end: end.toISOString().slice(0, 10)
+        };
     }
 
-    // Nâng cấp: Chèn dữ liệu theo tiêu chuẩn ACID 
-    async quickCreateWithTransaction(amount, note, categoryId, userId) {
+    /**
+     * Helper: Get today's date range for daily queries.
+     */
+    _getTodayRange() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        return {
+            start: start.toISOString().slice(0, 10),
+            end: end.toISOString().slice(0, 10)
+        };
+    }
+
+    /**
+     * ACID-safe transaction creation.
+     * Uses BEGIN/COMMIT/ROLLBACK to guarantee data integrity.
+     * Deadlock prevention: Single INSERT, no cross-table locking.
+     */
+    async create(amount, note, categoryId, userId) {
         const connection = await this.db.getConnection();
-        await connection.beginTransaction(); // Bắt đầu chế độ bảo vệ
+        await connection.beginTransaction();
 
         try {
             const sql = `INSERT INTO ${this.tableName} (amount, note, category_id, user_id) VALUES (?, ?, ?, ?)`;
             const [result] = await connection.execute(sql, [amount, note, categoryId, userId]);
-            
-            // Nếu sau này có Update Balance, thực hiện tại đây
-            // await connection.execute(`UPDATE user_settings SET ...`);
 
-            await connection.commit(); // Thành công thì chốt sổ
+            await connection.commit();
             return result.insertId;
         } catch (error) {
-            await connection.rollback(); // Lỗi thì đảo ngược an toàn
+            await connection.rollback();
             throw error;
         } finally {
-            connection.release(); // Trả lại kết nối cho Pool
+            connection.release();
         }
     }
 
-    // [DSA: Khuyến nghị đánh INDEX(user_id, category_id) ở database để Complexity là O(log N)]
+    /**
+     * Get total INCOME for the CURRENT MONTH only.
+     * FIX: Uses Range query instead of MONTH() to preserve B-Tree Index.
+     * DSA: O(log n) via INDEX(user_id, category_id).
+     */
     async getTotalIncome(userId) {
         const { CATEGORY } = require('../constant');
+        const { start, end } = this._getCurrentMonthRange();
         const [rows] = await this.db.execute(
-            `SELECT SUM(amount) as total FROM ${this.tableName} WHERE user_id = ? AND category_id = ?`, 
-            [userId, CATEGORY.INCOME]
+            `SELECT COALESCE(SUM(amount), 0) as total FROM ${this.tableName} 
+             WHERE user_id = ? AND category_id = ? 
+             AND created_at >= ? AND created_at < ?
+             AND deleted_at IS NULL`,
+            [userId, CATEGORY.INCOME, start, end]
         );
-        return rows[0].total || 0;
+        return rows[0].total ?? 0;
     }
 
+    /**
+     * Get total EXPENSE for the CURRENT MONTH only.
+     * FIX: Range query preserves Index. Excludes income category.
+     */
     async getTotalExpense(userId) {
         const { CATEGORY } = require('../constant');
+        const { start, end } = this._getCurrentMonthRange();
         const [rows] = await this.db.execute(
-            `SELECT SUM(amount) as total FROM ${this.tableName} WHERE user_id = ? AND category_id != ?`, 
-            [userId, CATEGORY.INCOME]
+            `SELECT COALESCE(SUM(amount), 0) as total FROM ${this.tableName} 
+             WHERE user_id = ? AND category_id != ? 
+             AND created_at >= ? AND created_at < ?
+             AND deleted_at IS NULL`,
+            [userId, CATEGORY.INCOME, start, end]
         );
-        return rows[0].total || 0;
+        return rows[0].total ?? 0;
     }
 
+    /**
+     * Get total expense for TODAY only (used by Mascot daily limit).
+     * FIX: Range query instead of DATE() function wrapper.
+     */
     async getTodayExpense(userId) {
         const { CATEGORY } = require('../constant');
+        const { start, end } = this._getTodayRange();
         const [rows] = await this.db.execute(
-            `SELECT SUM(amount) as total FROM ${this.tableName} WHERE user_id = ? AND category_id != ? AND DATE(created_at) = CURDATE()`, 
-            [userId, CATEGORY.INCOME]
+            `SELECT COALESCE(SUM(amount), 0) as total FROM ${this.tableName} 
+             WHERE user_id = ? AND category_id != ? 
+             AND created_at >= ? AND created_at < ?
+             AND deleted_at IS NULL`,
+            [userId, CATEGORY.INCOME, start, end]
         );
-        return rows[0].total || 0;
+        return rows[0].total ?? 0;
+    }
+
+    /**
+     * Get recent transactions for a user (for Frontend dashboard).
+     * FIX: Now supports pagination via page + limit params.
+     */
+    async getRecentByUserId(userId, page = 1, limit = 20) {
+        const offset = (page - 1) * limit;
+        const [rows] = await this.db.execute(
+            `SELECT t.*, c.name as category_name, c.icon as category_icon 
+             FROM ${this.tableName} t
+             LEFT JOIN categories c ON t.category_id = c.id
+             WHERE t.user_id = ? AND t.deleted_at IS NULL
+             ORDER BY t.created_at DESC LIMIT ? OFFSET ?`,
+            [userId, String(limit), String(offset)]
+        );
+        return rows;
     }
 }
 
-module.exports = new Transaction(); // Export dạng Singleton
+module.exports = new Transaction();
