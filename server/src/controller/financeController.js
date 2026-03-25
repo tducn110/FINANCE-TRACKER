@@ -45,7 +45,7 @@ const quickAddTransaction = async (req, res, next) => {
 
         res.status(201).json({
             success: true,
-            message: "Đã ghi sổ thành công! 🚀",
+            message: "Đã ghi sổ thành công! ",
             data: { id: insertId, ...parsedData, categoryId }
         });
 
