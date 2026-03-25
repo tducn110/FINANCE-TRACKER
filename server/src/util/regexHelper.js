@@ -1,14 +1,3 @@
-/**
- * Regex-based Natural Language Parser for Quick-Entry.
- * Converts strings like "50k cafe" OR "cafe 50k" → { amount: 50000, note: "cafe" }
- * 
- * Supported formats (Bidirectional):
- *   "50k cafe"     → 50000, "cafe"       (Pattern A: Number first)
- *   "cafe 50k"     → 50000, "cafe"       (Pattern B: Note first)
- *   "50.5k cơm"    → 50500, "cơm"
- *   "ăn sáng 30k"  → 30000, "ăn sáng"
- *   "200 xăng"     → 200, "xăng"  
- */
 const parseQuickInput = (input) => {
     const trimmed = input.trim();
 

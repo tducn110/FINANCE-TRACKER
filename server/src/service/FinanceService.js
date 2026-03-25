@@ -12,7 +12,6 @@ const { CACHE_TTL } = require('../constant');
  * The S2S Engine is the "brain" of this application.
  * Formula: S2S = MonthlyIncome - MonthlyExpense - UnpaidBills - GoalCommitments - EmergencyBuffer
  */
-
 /**
  * CacheAdapter: Strategy Pattern wrapper around Map().
  * All methods are async to allow future Redis/Memcached swap.
@@ -91,7 +90,6 @@ class FinanceService {
 
         // Cache result for future O(1) reads
         await this.cache.set(userId, result, CACHE_TTL.S2S_ENGINE);
-
         return result;
     }
 

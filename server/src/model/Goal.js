@@ -5,7 +5,6 @@ class Goal extends BaseModel {
         // Enable soft delete for financial goal retention
         super('goals', { softDelete: true });
     }
-
     /**
      * Get SUM of monthly contributions for all ACTIVE goals.
      * This is the "committed money" deducted from S2S.
@@ -19,7 +18,6 @@ class Goal extends BaseModel {
         );
         return rows[0].total ?? 0;
     }
-
     /**
      * Get the highest-value active goal (for Impact Calculator).
      * Returns undefined if no active goals exist.

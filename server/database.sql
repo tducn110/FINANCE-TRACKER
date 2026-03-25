@@ -1,8 +1,4 @@
--- ==========================================
--- 💰 S2S BEHAVIORAL FINANCE: DATABASE SCHEMA
--- ==========================================
--- Relational Integrity (Foreign Keys) + ACID (InnoDB)
--- Safe to re-run: DROP → CREATE → SEED.
+
 
 CREATE DATABASE IF NOT EXISTS finance_tracker;
 USE finance_tracker;
