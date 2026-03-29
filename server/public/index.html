@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="S2S Finance Tracker API - Enterprise Grade Behavioral Finance Tracker">
+    <title>S2S Finance Tracker API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .badge {
+            background: #10b981;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .endpoints {
+            margin-top: 30px;
+        }
+        
+        .endpoint {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+        }
+        
+        .method {
+            background: #3b82f6;
+            padding: 3px 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        a {
+            color: #fff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 S2S Finance Tracker</h1>
+        <p class="subtitle">Enterprise Grade v10 - Behavioral Finance API</p>
+        
+        <div class="status">
+            <div class="status-item">
+                <span>Status</span>
+                <span class="badge" id="status-badge">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span>Database</span>
+                <span id="database">TiDB Cloud (MySQL)</span>
+            </div>
+            <div class="status-item">
+                <span>Environment</span>
+                <span id="environment">Production</span>
+            </div>
+            <div class="status-item">
+                <span>Last Updated</span>
+                <span id="timestamp">Loading...</span>
+            </div>
+        </div>
+        
+        <div class="endpoints">
+            <h3 style="margin-bottom: 15px;">📡 Available Endpoints</h3>
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span>/health - Health check endpoint</span>
+            </div>
+            <div class="endpoint">
+                <span class="method">POST</span>
+                <span>/api/auth/register - User registration</span>
+            </div>
+            <div class="endpoint">
+                <span class="method">POST</span>
+                <span>/api/auth/login - User authentication</span>
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span>/api/finance/* - Finance operations</span>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Powered by Hono.js + TiDB Cloud | Deployed on <a href="https://vercel.com" target="_blank">Vercel</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Fetch health status
+        fetch('/health')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status-badge').textContent = 'Healthy';
+                document.getElementById('status-badge').style.background = '#10b981';
+                document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleString();
+                document.getElementById('database').textContent = data.database;
+            })
+            .catch(error => {
+                document.getElementById('status-badge').textContent = 'Offline';
+                document.getElementById('status-badge').style.background = '#ef4444';
+                console.error('Health check failed:', error);
+            });
+    </script>
+    
+    <!-- Vercel Web Analytics -->
+    <script>
+        window.va = window.va || function () { 
+            (window.vaq = window.vaq || []).push(arguments); 
+        };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
