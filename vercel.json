@@ -1,14 +1,15 @@
 {
-  "buildCommand": "cd server && npm run build",
-  "outputDirectory": "server/dist",
-  "framework": null,
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/server/src/app.ts"
+      "src": "api/index.ts",
+      "use": "@vercel/node"
     }
   ],
-  "analytics": {
-    "enable": true
-  }
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "api/index.ts"
+    }
+  ]
 }
