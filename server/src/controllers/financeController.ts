@@ -2,7 +2,14 @@ import { Hono } from "hono";
 import { financeService } from "../services/financeService.js";
 import { authMiddleware } from "../middleware/auth.js";
 
-const api = new Hono();
+type Variables = {
+  jwtPayload: {
+    sub: string;
+    email: string;
+  };
+};
+
+const api = new Hono<{ Variables: Variables }>();
 
 api.use("*", authMiddleware);
 

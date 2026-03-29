@@ -1,13 +1,11 @@
+import 'dotenv/config';
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
-import * as dotenv from "dotenv";
 
 import { globalErrorHandler } from "./middleware/error.js";
 import authRouter from "./controllers/authController.js";
 import financeRouter from "./controllers/financeController.js";
-
-dotenv.config();
 
 const app = new Hono();
 
