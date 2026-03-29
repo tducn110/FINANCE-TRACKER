@@ -12,7 +12,7 @@ export default defineConfig({
     database: process.env.DB_NAME!,
     port: parseInt(process.env.DB_PORT || '4000'),
     ssl: {
-      rejectUnauthorized: true,
+      rejectUnauthorized: false,
     },
   },
   verbose: true,
