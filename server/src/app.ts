@@ -50,6 +50,17 @@ app.get("/health", (c) => {
   });
 });
 
+// Thêm vào server/src/app.ts trước các dòng app.route
+app.get("/api", (c) => {
+  return c.json({
+    project: "S2S Finance Tracker",
+    version: "1.0.0-alpha",
+    author: "Tam Duc - VNUK CSE",
+    status: "online",
+    message: "Welcome to the Behavioral Finance API Gateway 🚀",
+    timestamp: new Date().toISOString()
+  });
+});
 // Chắp nối các Router Module
 app.route("/api/auth", authRouter);
 app.route("/api/finance", financeRouter);
