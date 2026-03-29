@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-// Create a generic Axios instance mapping to the backend
+// ✅ Sửa lại baseURL để nó tự động lấy từ .env hoặc fallback về localhost
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
+// ... (các đoạn request interceptor và service giữ nguyên bên dưới)
 // Interceptor to inject the JWT token if present in localStorage
 api.interceptors.request.use(
   (config) => {
@@ -24,7 +25,7 @@ export const authService = {
   login: async (credentials: any) => {
     const response = await api.post('/auth/login', credentials);
     if (response.data.data.token) {
-        localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('token', response.data.data.token);
     }
     return response.data;
   },
