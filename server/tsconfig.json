@@ -10,6 +10,6 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src/**/*", "drizzle.config.ts", "test-db.ts", "vercel.json"],
+  "include": ["src/**/*", "drizzle.config.ts", "test-db.ts"],
   "exclude": ["node_modules", "dist"]
 }
