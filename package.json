@@ -1,4 +1,10 @@
 {
+  "name": "finance-tracker-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd client && npm run build && cd ../server && npm run build"
+  },
   "dependencies": {
     "@vercel/analytics": "^2.0.1"
   }

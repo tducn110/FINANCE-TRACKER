@@ -1,14 +1,16 @@
 {
-  "buildCommand": "cd server && npm run build",
-  "outputDirectory": "server/dist",
-  "framework": null,
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "client/dist",
+  "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/server/api/index.ts"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/server/src/app.ts"
+      "destination": "/index.html"
     }
-  ],
-  "analytics": {
-    "enable": true
-  }
+  ]
 }
