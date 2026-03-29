@@ -41,7 +41,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
   }
 
   try {
-    const decodedPayload = await verify(token, JWT_SECRET, "HS256") as { sub: string, email: string };
+    const decodedPayload = await verify(token, JWT_SECRET, "HS256");
     c.set("jwtPayload", decodedPayload);
     await next();
   } catch (error) {

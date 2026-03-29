@@ -1,0 +1,14 @@
+{
+  "buildCommand": "cd server && npm run build",
+  "outputDirectory": "server/dist",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/server/src/app.ts"
+    }
+  ],
+  "analytics": {
+    "enable": true
+  }
+}
