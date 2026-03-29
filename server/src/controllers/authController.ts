@@ -9,9 +9,28 @@ api.post("/login", async (c) => {
   if (email === "demo@s2s.vn" && password === "123456") {
     const token = await generateToken("demo-user-id", email);
     setAuthCookie(c, token);
-    return c.json({ success: true, user: { id: "demo-user-id", fullName: "Demo User", email } });
+    return c.json({ 
+      success: true, 
+      data: {
+        token: token,
+        user: { id: "demo-user-id", fullName: "Demo User", email }
+      }
+    });
   }
   return c.json({ success: false, message: "Invalid credentials" }, 401);
+});
+
+api.post("/register", async (c) => {
+  const { email, fullName } = await c.req.json();
+  const token = await generateToken("demo-user-id", email);
+  setAuthCookie(c, token);
+  return c.json({ 
+    success: true, 
+    data: {
+      token: token,
+      user: { id: "demo-user-id", fullName: fullName || "New User", email }
+    }
+  });
 });
 
 api.post("/logout", (c) => {
