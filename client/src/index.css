@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 @import "tailwindcss";
 @source "./src/**/*.{js,ts,jsx,tsx}";
-=======
-@import 'tailwindcss';
->>>>>>> f22059e89e6fbb7a71609f9d89513cfa86ad0f44
 @import 'tw-animate-css';
-@import './styles/globals.css';
+@import './styles/globals.css';
