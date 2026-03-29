@@ -55,9 +55,28 @@ app.route("/api/auth", authRouter);
 app.route("/api/finance", financeRouter);
 
 // Export for Vercel
-import { handle } from '@hono/node-server/vercel';
-export default handle(app);
+//import { handle } from '@hono/node-server/vercel';
+//export default handle(app);
 
+// ... (code ở trên giữ nguyên)
+
+// ❌ XÓA HOẶC COMMENT ĐOẠN NÀY ĐI:
+// import { handle } from '@hono/node-server/vercel';
+// export default handle(app);
+
+// ✅ THAY BẰNG DÒNG NÀY:
+export default app; // Chỉ export cái lõi Hono nguyên bản thôi!
+
+// For local development (Giữ nguyên đoạn này, nó rất tốt)
+if (process.env.NODE_ENV !== "production") {
+  const { serve } = await import("@hono/node-server");
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+  console.log(`Server is running locally on port ${port}`);
+  serve({
+    fetch: app.fetch,
+    port,
+  });
+}
 // For local development
 if (process.env.NODE_ENV !== "production") {
   const { serve } = await import("@hono/node-server");
