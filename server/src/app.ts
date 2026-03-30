@@ -22,7 +22,7 @@ const __dirname = dirname(__filename);
 // Middlewares
 app.use("*", logger());
 app.use("*", cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "https://*.vercel.app"],
+  origin: (origin) => origin, // Allow any origin to simplify monorepo dev/preview
   credentials: true,
 }));
 
