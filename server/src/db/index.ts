@@ -18,11 +18,15 @@ const pool = mysql.createPool({
   database: DB_NAME,
   port: Number(DB_PORT) || 4000,
   ssl: {
-    rejectUnauthorized: true,
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: false,
   },
+  connectTimeout: 10000, // Important fix for Windows environment hangs
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
 });
 
 export const db = drizzle(pool, { schema, mode: 'default' });
