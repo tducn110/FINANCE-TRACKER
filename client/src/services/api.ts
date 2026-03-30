@@ -21,6 +21,21 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// ✅ Add response interceptor for better debugging
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('❌ API Error Detail:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    return Promise.reject(error);
+  }
+);
+
 export const authService = {
   login: async (credentials: any) => {
     const response = await api.post('/auth/login', credentials);
