@@ -10,6 +10,8 @@ import { dirname, join } from "node:path";
 import { globalErrorHandler } from "./middleware/error.js";
 import authRouter from "./controllers/authController.js";
 import financeRouter from "./controllers/financeController.js";
+import { db } from "./db/index.js";
+import { sql } from "drizzle-orm";
 
 const app = new Hono();
 
@@ -42,12 +44,24 @@ app.get("/", (c) => {
   }
 });
 
-app.get("/health", (c) => {
-  return c.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    database: "TiDB Cloud (MySQL)"
-  });
+app.get("/health", async (c) => {
+  try {
+    // REAL DATABASE CHECK
+    await db.execute(sql`SELECT 1`);
+    return c.json({
+      status: "healthy",
+      database: "connected",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("DATABASE HEALTH CHECK FAILED:", error);
+    return c.json({
+      status: "unhealthy",
+      database: "error",
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    }, 500);
+  }
 });
 
 // Thêm vào server/src/app.ts trước các dòng app.route

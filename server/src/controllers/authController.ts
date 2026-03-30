@@ -4,9 +4,14 @@ import { generateToken, setAuthCookie, clearAuthCookie } from "../middleware/aut
 const api = new Hono();
 
 api.post("/login", async (c) => {
-  const { email, password } = await c.req.json();
+  const body = await c.req.json();
+  const { email, password } = body;
+  
+  console.log(`[AUTH] Login attempt for: ${email}`);
+
   // Simulated validation for Alpha Test
   if (email === "demo@s2s.vn" && password === "123456") {
+    console.log(`[AUTH] Login SUCCESS for: ${email}`);
     const token = await generateToken("demo-user-id", email);
     setAuthCookie(c, token);
     return c.json({ 
@@ -17,6 +22,8 @@ api.post("/login", async (c) => {
       }
     });
   }
+  
+  console.warn(`[AUTH] Login FAILED for: ${email} - Invalid credentials`);
   return c.json({ success: false, message: "Invalid credentials" }, 401);
 });
 
