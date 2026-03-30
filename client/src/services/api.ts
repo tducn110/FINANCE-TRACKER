@@ -56,17 +56,36 @@ export const authService = {
   }
 };
 
-export const financeService = {
+export interface IFinanceService {
+  getSafeToSpend: () => Promise<any>;
+  getMascotStatus: () => Promise<any>;
+  getTransactions: () => Promise<any>;
+  getMonthlyTrend: () => Promise<any>;
+  quickAddTransaction: (data: { amount: number; note: string; category_id: string; date?: string }) => Promise<any>;
+  checkGoalImpact: (data: { simulate_expense: number }) => Promise<any>;
+  getCategories: () => Promise<any>;
+  uploadOCR: (file: File) => Promise<any>;
+}
+
+export const financeService: IFinanceService = {
   getSafeToSpend: async () => {
     const response = await api.get('/finance/safe-to-spend');
     return response.data;
   },
   getMascotStatus: async () => {
-    const response = await api.get('/mascot/status');
+    const response = await api.get('/finance/mascot-status');
     return response.data;
   },
-  quickAddTransaction: async (data: { amount: number; note: string; category_id: number; date?: string }) => {
-    const response = await api.post('/transactions/quick', data);
+  getTransactions: async () => {
+    const response = await api.get('/finance/transactions');
+    return response.data;
+  },
+  getMonthlyTrend: async () => {
+    const response = await api.get('/finance/trend');
+    return response.data;
+  },
+  quickAddTransaction: async (data: { amount: number; note: string; category_id: string; date?: string }) => {
+    const response = await api.post('/finance/transactions/quick', data);
     return response.data;
   },
   checkGoalImpact: async (data: { simulate_expense: number }) => {
